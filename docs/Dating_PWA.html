@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dating PWA — Architecture &amp; Tech Stack</title>
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:14px;background:#f5f7fa;color:#1e1e1e}
+
+/* ── Fixed Nav ── */
+#nav{
+  position:fixed;top:0;left:0;right:0;height:58px;
+  background:#0F4C81;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;z-index:9999;
+  box-shadow:0 2px 12px rgba(0,0,0,.25);
+}
+#nav button{
+  background:rgba(255,255,255,.14);color:#fff;
+  border:1px solid rgba(255,255,255,.32);
+  padding:8px 20px;border-radius:7px;cursor:pointer;
+  font-size:14px;font-weight:700;letter-spacing:.02em;
+  transition:background .15s;white-space:nowrap;
+}
+#nav button:hover:not(:disabled){background:rgba(255,255,255,.26)}
+#nav button:disabled{opacity:.3;cursor:not-allowed}
+#nav-mid{text-align:center;color:#fff;line-height:1.3}
+#nav-mid .title{font-size:15px;font-weight:700}
+#nav-mid .num{font-size:11px;opacity:.65;margin-top:1px}
+
+/* ── Pages ── */
+.pg{display:none;padding-top:58px;min-height:100vh}
+.pg.active{display:block}
+
+/* ════════════════════════════════════════════
+   PAGE 1 — V1/V2/V3 ARCHITECTURE
+   ════════════════════════════════════════════ */
+#p1{background:#f0f4f8}
+.arch-hero{
+  background:linear-gradient(135deg,#0F4C81 0%,#1A73E8 100%);
+  padding:36px 48px 28px;color:#fff;
+}
+.arch-hero h1{font-size:28px;font-weight:800;margin-bottom:4px}
+.arch-hero p{font-size:13px;opacity:.8;max-width:680px;line-height:1.6}
+
+/* Version tabs */
+.vtabs{display:flex;gap:0;padding:0 48px;background:#fff;border-bottom:2px solid #e2e8f0}
+.vtab{
+  padding:14px 28px;cursor:pointer;font-size:14px;font-weight:700;
+  border-bottom:3px solid transparent;margin-bottom:-2px;
+  color:#64748b;transition:color .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.vtab:hover{color:#0F4C81}
+.vtab.active{color:#0F4C81;border-bottom-color:#0F4C81}
+.vtab .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.vtab-v1 .dot{background:#059669}.vtab-v1.active{color:#059669;border-bottom-color:#059669}
+.vtab-v2 .dot{background:#2563eb}.vtab-v2.active{color:#2563eb;border-bottom-color:#2563eb}
+.vtab-v3 .dot{background:#7c3aed}.vtab-v3.active{color:#7c3aed;border-bottom-color:#7c3aed}
+
+/* Version panel */
+.vpanel{display:none;padding:32px 48px 48px}
+.vpanel.active{display:block}
+
+.ver-banner{
+  border-radius:10px;padding:16px 22px;margin-bottom:28px;
+  display:flex;align-items:center;gap:16px;
+}
+.ver-banner.v1{background:#ecfdf5;border:1px solid #6ee7b7}
+.ver-banner.v2{background:#eff6ff;border:1px solid #93c5fd}
+.ver-banner.v3{background:#f5f3ff;border:1px solid #c4b5fd}
+.ver-badge{
+  padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;
+  color:#fff;white-space:nowrap;
+}
+.ver-badge.v1{background:#059669}.ver-badge.v2{background:#2563eb}.ver-badge.v3{background:#7c3aed}
+.ver-banner h3{font-size:16px;font-weight:700;margin-bottom:2px}
+.ver-banner p{font-size:12px;color:#555;line-height:1.5}
+
+/* Architecture rows */
+.arch-row{margin-bottom:20px}
+.arch-row-label{
+  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
+  color:#94a3b8;margin-bottom:8px;
+}
+.arch-blocks{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+
+/* Block types */
+.blk{
+  border-radius:8px;padding:10px 14px;
+  font-size:12px;font-weight:600;
+  display:flex;flex-direction:column;gap:2px;
+  min-width:120px;position:relative;
+}
+.blk .blk-icon{font-size:16px;margin-bottom:2px}
+.blk .blk-name{font-size:12px;font-weight:700;line-height:1.2}
+.blk .blk-sub{font-size:10px;font-weight:400;opacity:.7;line-height:1.3}
+.blk.new::after{
+  content:'NEW';position:absolute;top:-6px;right:-6px;
+  background:#f59e0b;color:#fff;font-size:8px;font-weight:800;
+  padding:1px 5px;border-radius:4px;letter-spacing:.05em;
+}
+
+/* Client */
+.blk-client{background:#1e293b;color:#f1f5f9;min-width:160px}
+/* MFE */
+.blk-mfe{background:#1A73E8;color:#fff}
+.blk-mfe-new{background:#0d5cba;color:#fff}
+/* Service */
+.blk-svc{background:#0F4C81;color:#fff}
+.blk-svc-new{background:#083560;color:#fff}
+/* AI */
+.blk-ai{background:#7c3aed;color:#fff}
+.blk-ai-new{background:#5b21b6;color:#fff}
+/* Data */
+.blk-data{background:#0891b2;color:#fff}
+.blk-data-new{background:#06607a;color:#fff}
+/* Infra */
+.blk-infra{background:#065f46;color:#fff}
+.blk-infra-new{background:#054737;color:#fff}
+
+.arch-divider{
+  height:1px;background:#e2e8f0;margin:22px 0;
+}
+
+/* ════════════════════════════════════════════
+   PAGE 2 — TECH STACK CHIPS
+   ════════════════════════════════════════════ */
+#p2{background:#f5f7fa}
+.ts-hero{
+  background:linear-gradient(135deg,#1A73E8 0%,#0F4C81 100%);
+  padding:36px 48px 28px;color:#fff;
+}
+.ts-hero h1{font-size:28px;font-weight:800;margin-bottom:4px}
+.ts-hero p{font-size:13px;opacity:.8;max-width:680px;line-height:1.6}
+
+/* Filter tabs */
+.ftabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:20px 48px;background:#fff;
+  border-bottom:2px solid #e2e8f0;
+  position:sticky;top:58px;z-index:100;
+}
+.ftab{
+  padding:7px 16px;border-radius:20px;cursor:pointer;
+  font-size:12px;font-weight:700;border:2px solid #e2e8f0;
+  background:#f8fafc;color:#64748b;transition:all .15s;
+}
+.ftab:hover{border-color:#1A73E8;color:#1A73E8}
+.ftab.active{background:#1A73E8;border-color:#1A73E8;color:#fff}
+.ftab .cnt{
+  display:inline-block;background:rgba(255,255,255,.25);
+  border-radius:10px;padding:0 7px;margin-left:5px;font-size:11px;
+}
+.ftab:not(.active) .cnt{background:#e2e8f0;color:#64748b}
+
+/* Chips area */
+.chips-area{padding:28px 48px 48px;min-height:400px}
+.cat-group{margin-bottom:32px}
+.cat-label{
+  font-size:13px;font-weight:800;color:#0F4C81;
+  text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:12px;padding-bottom:6px;
+  border-bottom:2px solid #1A73E8;
+  display:flex;align-items:center;gap:8px;
+}
+.cat-label .cat-icon{font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:22px;
+  font-size:12px;font-weight:600;cursor:default;
+  background:#fff;border:1.5px solid #e2e8f0;color:#1e293b;
+  transition:box-shadow .15s,transform .1s;
+  position:relative;
+}
+.chip:hover{box-shadow:0 4px 16px rgba(0,0,0,.12);transform:translateY(-1px)}
+.chip .vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.chip .vdot.v1{background:#059669}
+.chip .vdot.v2{background:#2563eb}
+.chip .vdot.v3{background:#7c3aed}
+
+/* Global tooltip */
+#chip-tip{
+  position:fixed;z-index:99999;pointer-events:none;
+  background:#1e293b;color:#f1f5f9;
+  padding:9px 13px;border-radius:8px;
+  font-size:12px;line-height:1.5;max-width:280px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
+  display:none;
+}
+#chip-tip .tip-name{font-weight:700;margin-bottom:3px;font-size:13px}
+#chip-tip .tip-ver{font-size:10px;opacity:.6;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+#chip-tip .tip-desc{font-size:11px;opacity:.85;line-height:1.5}
+
+/* ════════════════════════════════════════════
+   PAGE 3 — TECH STACK REFERENCE
+   ════════════════════════════════════════════ */
+#p3{background:#f5f7fa}
+.p3wrap{max-width:1100px;margin:0 auto;background:#fff;box-shadow:0 2px 24px rgba(0,0,0,.08);min-height:calc(100vh - 58px)}
+:root{--accent:#0F4C81;--accent2:#1A73E8;--light-bg:#EBF3FB;--row-alt:#F7FAFD;--border:#C5D8EE;--v1:#059669;--v2:#2563eb;--v3:#7c3aed}
+.p3-topbar{background:var(--accent);color:#fff;padding:32px 48px 28px}
+.p3-topbar h1{font-size:32px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px}
+.p3-topbar .subtitle{font-size:15px;opacity:.85;margin-bottom:16px}
+.p3-topbar .intro{font-size:13px;opacity:.75;max-width:740px;line-height:1.7}
+.p3-legend{display:flex;gap:20px;padding:14px 48px;background:#f8fafc;border-bottom:1px solid #e8eef5;font-size:12px;color:#555;flex-wrap:wrap}
+.p3-leg-item{display:flex;align-items:center;gap:6px}
+.p3-leg-dot{width:10px;height:10px;border-radius:50%}
+.p3-toc-wrap{padding:28px 48px 20px;border-bottom:1px solid #e8eef5;background:var(--light-bg)}
+.p3-toc-wrap h2{font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.p3-toc{columns:2;column-gap:32px;list-style:none}
+.p3-toc li{margin-bottom:5px;break-inside:avoid}
+.p3-toc a{color:var(--accent2);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:7px}
+.p3-toc a:hover{text-decoration:underline}
+.p3-content{padding:0 48px 48px}
+.p3-section{margin-top:44px}
+.p3-section-header{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:3px solid var(--accent);margin-bottom:14px}
+.p3-section-icon{font-size:22px}
+.p3-section-title{font-size:20px;font-weight:700;color:var(--accent)}
+.p3-section-count{margin-left:auto;font-size:11px;color:#888;background:#f0f4f8;padding:2px 9px;border-radius:10px}
+.p3-section-intro{font-size:13px;color:#444;margin-bottom:16px;line-height:1.75;max-width:860px}
+.p3wrap table{width:100%;border-collapse:collapse;font-size:13px}
+.p3wrap thead th{background:var(--light-bg);color:var(--accent);font-weight:700;padding:10px 14px;text-align:left;border:1px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.p3wrap tbody tr:nth-child(even) td{background:var(--row-alt)}
+.p3wrap tbody tr:hover td{background:#e8f0fb}
+.p3wrap tbody td{padding:10px 14px;border:1px solid var(--border);vertical-align:top}
+.p3-col-tech{width:18%;font-weight:600;color:#1a1a2e}
+.p3-col-ver{width:8%;text-align:center}
+.p3-col-usage{width:74%;color:#333;line-height:1.65}
+.p3-vbadge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
+.p3-vbadge.v1{background:var(--v1)}.p3-vbadge.v2{background:var(--v2)}.p3-vbadge.v3{background:var(--v3)}
+.p3-footer{padding:20px 48px;border-top:1px solid #e8eef5;font-size:11px;color:#aaa;text-align:center}
+@media(max-width:700px){
+  .vtabs,.vpanel,.ftabs,.chips-area{padding-left:16px;padding-right:16px}
+  .arch-hero,.ts-hero,.p3-topbar,.p3-toc-wrap,.p3-content,.p3-legend{padding-left:18px;padding-right:18px}
+  .p3-toc{columns:1}
+  .p3wrap table{font-size:12px}
+  #nav{padding:0 12px}
+  #nav button{padding:7px 12px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ FIXED NAV ══ -->
+<div id="nav">
+  <button id="btn-prev" disabled onclick="goPage(-1)">&#8592; Previous</button>
+  <div id="nav-mid">
+    <div class="title" id="nav-title">V1/V2/V3 Architecture</div>
+    <div class="num" id="nav-num">1 / 3</div>
+  </div>
+  <button id="btn-next" onclick="goPage(1)">Next &#8594;</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — V1/V2/V3 LEGO ARCHITECTURE
+     ══════════════════════════════════════════ -->
+<div id="p1" class="pg active">
+  <div class="arch-hero">
+    <h1>🏗️ V1 → V2 → V3 Architecture</h1>
+    <p>A lego-block roadmap for the Dating &amp; Relationship PWA. Each version adds independently deployable blocks on top of the previous foundation — no rewrites, only additions.</p>
+  </div>
+
+  <div class="vtabs">
+    <div class="vtab vtab-v1 active" onclick="showVer('v1',this)"><span class="dot"></span>V1 — Foundation <small style="font-weight:400;opacity:.6;margin-left:4px">0–9 months</small></div>
+    <div class="vtab vtab-v2" onclick="showVer('v2',this)"><span class="dot"></span>V2 — Trust &amp; Engagement <small style="font-weight:400;opacity:.6;margin-left:4px">12–18 months</small></div>
+    <div class="vtab vtab-v3" onclick="showVer('v3',this)"><span class="dot"></span>V3 — Full Ecosystem <small style="font-weight:400;opacity:.6;margin-left:4px">18–36 months</small></div>
+  </div>
+
+  <!-- V1 -->
+  <div class="vpanel active" id="ver-v1">
+    <div class="ver-banner v1">
+      <span class="ver-badge v1">V1</span>
+      <div><h3>Foundation (0–9 months)</h3><p>Core matching, chat, and profile loop. Enough to acquire users and validate PMF. Monorepo microfrontend shell with 4 MFEs, 5 backend services, basic AI coaching, DigitalOcean infra.</p></div>
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">👤 Client Layer</div>
+      <div class="arch-blocks">
+        <div class="blk blk-client"><div class="blk-icon">🌐</div><div class="blk-name">Web Browser</div><div class="blk-sub">React 18 PWA + Shell<br>Webpack Module Federation</div></div>
+        <div class="blk blk-client"><div class="blk-icon">📱</div><div class="blk-name">Mobile App</div><div class="blk-sub">Ionic React + Capacitor<br>iOS &amp; Android (~85% shared)</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🧩 Microfrontend Layer (Module Federation Remotes)</div>
+      <div class="arch-blocks">
+        <div class="blk blk-mfe"><div class="blk-name">Shell Host</div><div class="blk-sub">Auth guard · Routing<br>Zustand · Socket.io client</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Auth MFE</div><div class="blk-sub">Sign-up · Sign-in<br>Google / Facebook / Apple</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Profile MFE</div><div class="blk-sub">Edit profile · Photo upload<br>Preference wizard</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Discovery MFE</div><div class="blk-sub">Swipe feed · Filters<br>Match reveal</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Chat MFE</div><div class="blk-sub">Messaging · Voice/Video<br>Icebreaker AI</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">⚙️ Backend Microservices (NestJS · Node.js 20 LTS)</div>
+      <div class="arch-blocks">
+        <div class="blk blk-svc"><div class="blk-name">Auth Service</div><div class="blk-sub">JWT · OAuth · Passport.js<br>Refresh tokens</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Profile Service</div><div class="blk-sub">CRUD · Photo · Prefs<br>MongoDB · Prisma</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Matching Service</div><div class="blk-sub">Swipe · Queue<br>PostgreSQL · Redis</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Chat Service</div><div class="blk-sub">WebSocket · WebRTC<br>Socket.io server</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Notify Service</div><div class="blk-sub">FCM · APNs · SendGrid<br>Twilio SMS OTP</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Subscription Svc</div><div class="blk-sub">Plans · Billing<br>Razorpay · Stripe</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🤖 AI Layer (FastAPI · Python 3.11 · LangChain)</div>
+      <div class="arch-blocks">
+        <div class="blk blk-ai"><div class="blk-name">AI Service</div><div class="blk-sub">GPT-4o · Claude 3.5<br>Bio gen · Icebreakers</div></div>
+        <div class="blk blk-ai"><div class="blk-name">Embedding Pipeline</div><div class="blk-sub">OpenAI Embeddings<br>Pinecone vector store</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🗄️ Data Layer</div>
+      <div class="arch-blocks">
+        <div class="blk blk-data"><div class="blk-name">DO Managed PostgreSQL</div><div class="blk-sub">Auth · Matching · Wallet<br>Event · Trust · Safety</div></div>
+        <div class="blk blk-data"><div class="blk-name">MongoDB</div><div class="blk-sub">Profile · Experience<br>Marketplace catalogue</div></div>
+        <div class="blk blk-data"><div class="blk-name">DO Managed Redis</div><div class="blk-sub">Cache · Sessions<br>BullMQ · Rate limits</div></div>
+        <div class="blk blk-data"><div class="blk-name">DO Spaces + CDN</div><div class="blk-sub">Photos · Videos<br>Voice notes · Assets</div></div>
+        <div class="blk blk-data"><div class="blk-name">Pinecone</div><div class="blk-sub">Profile embeddings<br>Semantic matching</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🏗️ Infrastructure (DigitalOcean)</div>
+      <div class="arch-blocks">
+        <div class="blk blk-infra"><div class="blk-name">DOKS</div><div class="blk-sub">Kubernetes · Helm<br>Auto-scaling pods</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Cloudflare</div><div class="blk-sub">CDN · WAF · DDoS<br>DNS · Edge rate limit</div></div>
+        <div class="blk blk-infra"><div class="blk-name">DO Container Registry</div><div class="blk-sub">Private Docker images<br>DOKS pull integration</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Terraform</div><div class="blk-sub">IaC · All DO resources<br>Reproducible envs</div></div>
+        <div class="blk blk-infra"><div class="blk-name">GitHub Actions</div><div class="blk-sub">CI/CD pipeline<br>Lint→Test→Build→Deploy</div></div>
+        <div class="blk blk-infra"><div class="blk-name">HashiCorp Vault</div><div class="blk-sub">Secrets injection<br>No env files in repo</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Datadog + Sentry</div><div class="blk-sub">APM · Logs · Traces<br>Error tracking</div></div>
+      </div>
+    </div>
+  </div><!-- /ver-v1 -->
+
+  <!-- V2 -->
+  <div class="vpanel" id="ver-v2">
+    <div class="ver-banner v2">
+      <span class="ver-badge v2">V2</span>
+      <div><h3>Trust &amp; Engagement (12–18 months)</h3><p>Adds safety, identity verification, events, and experiences on top of V1. Go microservices replace Node for high-throughput discovery. Kafka introduced for async inter-service events.</p></div>
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">👤 Client Layer</div>
+      <div class="arch-blocks">
+        <div class="blk blk-client"><div class="blk-icon">🌐</div><div class="blk-name">Web Browser</div><div class="blk-sub">React 18 PWA + Shell<br>+ 4 new MFE remotes</div></div>
+        <div class="blk blk-client"><div class="blk-icon">📱</div><div class="blk-name">Mobile App</div><div class="blk-sub">+ Biometrics (Face ID)<br>+ Screen Reader a11y</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🧩 Microfrontend Layer — V1 blocks + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-mfe"><div class="blk-name">Shell Host</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Auth MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Profile MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Discovery MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Chat MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Safety MFE</div><div class="blk-sub">Panic button · Contacts<br>Check-in · Reports</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Verification MFE</div><div class="blk-sub">Onfido KYC · LinkedIn<br>Trust badges</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Events MFE</div><div class="blk-sub">Browse · RSVP<br>QR tickets · Calendar sync</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Experience MFE</div><div class="blk-sub">Date ideas · Book<br>Venue catalogue</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">⚙️ Backend Microservices — V1 services + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-svc"><div class="blk-name">Auth Service</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Profile Service</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Chat Service</div><div class="blk-sub">V1 + Daily.co fallback</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Notify Service</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Subscription Svc</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Discovery Svc</div><div class="blk-sub">🐹 Go 1.22 rewrite<br>~10× throughput vs Node</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Trust Score Svc</div><div class="blk-sub">scikit-learn · BullMQ<br>Nightly recalculation</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Safety Service</div><div class="blk-sub">Panic · Check-in<br>Reports · Blocking</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Verification Svc</div><div class="blk-sub">Onfido + Jumio<br>LinkedIn OAuth</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Event Service</div><div class="blk-sub">RSVP · QR · Calendar<br>Ticket management</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Experience Svc</div><div class="blk-sub">Catalogue · Booking<br>Venue integration</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🤖 AI Layer — V1 + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-ai"><div class="blk-name">AI Service</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-ai"><div class="blk-name">Embedding Pipeline</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">LangGraph Agent</div><div class="blk-sub">Multi-step date planning<br>Agentic coaching loops</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">HuggingFace Models</div><div class="blk-sub">Toxicity filter · Fraud NLP<br>Profile quality scorer</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">Celery + Redis Queue</div><div class="blk-sub">Async ML inference<br>Batch scoring jobs</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🗄️ Data Layer — V1 + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-data"><div class="blk-name">DO Managed PostgreSQL</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">MongoDB</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">DO Managed Redis</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">DO Spaces + CDN</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">Pinecone</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data new"><div class="blk-name">DO Managed OpenSearch</div><div class="blk-sub">Profile search · Events<br>Interest tag full-text</div></div>
+        <div class="blk blk-data new"><div class="blk-name">DO Managed Kafka</div><div class="blk-sub">Async event bus<br>match.created · gift.redeemed</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🏗️ Infrastructure — V1 + OpenTelemetry tracing</div>
+      <div class="arch-blocks">
+        <div class="blk blk-infra"><div class="blk-name">DOKS</div><div class="blk-sub">V1 + Go node pool</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Cloudflare</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Terraform</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">GitHub Actions</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">HashiCorp Vault</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Datadog + Sentry</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra new"><div class="blk-name">OpenTelemetry</div><div class="blk-sub">Distributed tracing SDK<br>Cross-service span export</div></div>
+      </div>
+    </div>
+  </div><!-- /ver-v2 -->
+
+  <!-- V3 -->
+  <div class="vpanel" id="ver-v3">
+    <div class="ver-banner v3">
+      <span class="ver-badge v3">V3</span>
+      <div><h3>Full Ecosystem (18–36 months)</h3><p>Completes the product with Wallet, Gifts, Marketplace, Couples features, and a custom AI compatibility model. ClickHouse analytics and multi-region DR added.</p></div>
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🧩 Microfrontend Layer — V1+V2 blocks + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-mfe"><div class="blk-name">Shell Host</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Auth MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Profile MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Discovery MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Chat MFE</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Safety MFE</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Verification MFE</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Events MFE</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-mfe"><div class="blk-name">Experience MFE</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Wallet MFE</div><div class="blk-sub">Balance · Top-up<br>Transaction history</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Gift MFE</div><div class="blk-sub">Send gifts · E-cards<br>FNP / IGP catalogue</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Marketplace MFE</div><div class="blk-sub">Browse · Partner offers<br>Merchant storefront</div></div>
+        <div class="blk blk-mfe new"><div class="blk-name">Couples MFE</div><div class="blk-sub">Shared goals · Milestones<br>Anniversary reminders</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">⚙️ Backend Microservices — V1+V2 + NEW additions</div>
+      <div class="arch-blocks">
+        <div class="blk blk-svc"><div class="blk-name">Auth · Profile · Chat</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Discovery · Trust · Safety</div><div class="blk-sub">V1/V2</div></div>
+        <div class="blk blk-svc"><div class="blk-name">Verification · Event · Experience</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Wallet Service</div><div class="blk-sub">Balance · Ledger<br>Top-up · Refund</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Gift Service</div><div class="blk-sub">Order · Dispatch<br>Redemption codes</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Marketplace Svc</div><div class="blk-sub">Product catalogue<br>Order management</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Couples Service</div><div class="blk-sub">Relationship goals<br>Milestone tracking</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Concierge AI Svc</div><div class="blk-sub">LangGraph agent<br>Personalised planning</div></div>
+        <div class="blk blk-svc new"><div class="blk-name">Merchant Service</div><div class="blk-sub">Partner onboarding<br>Revenue dashboard</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🤖 AI Layer — V1+V2 + NEW proprietary models</div>
+      <div class="arch-blocks">
+        <div class="blk blk-ai"><div class="blk-name">AI Service + LangGraph</div><div class="blk-sub">V1/V2</div></div>
+        <div class="blk blk-ai"><div class="blk-name">HuggingFace · scikit-learn</div><div class="blk-sub">V2</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">PyTorch Compatibility Model</div><div class="blk-sub">Custom proprietary model<br>Relationship likelihood score</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">MLflow Registry</div><div class="blk-sub">Experiment tracking<br>Safe model rollout</div></div>
+        <div class="blk blk-ai new"><div class="blk-name">DO GPU Droplets (H100)</div><div class="blk-sub">Scheduled training runs<br>Spin-up &amp; tear-down</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🗄️ Data Layer — V1+V2 + NEW analytics store</div>
+      <div class="arch-blocks">
+        <div class="blk blk-data"><div class="blk-name">DO Managed PostgreSQL</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">MongoDB · Redis · Spaces</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-data"><div class="blk-name">OpenSearch · Kafka · Pinecone</div><div class="blk-sub">V1/V2</div></div>
+        <div class="blk blk-data new"><div class="blk-name">ClickHouse</div><div class="blk-sub">Columnar analytics<br>Partner dashboards · Funnels</div></div>
+      </div>
+    </div>
+    <div class="arch-divider"></div>
+
+    <div class="arch-row">
+      <div class="arch-row-label">🏗️ Infrastructure — V1+V2 + multi-region DR</div>
+      <div class="arch-blocks">
+        <div class="blk blk-infra"><div class="blk-name">DOKS · Helm · Docker</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Cloudflare · Terraform</div><div class="blk-sub">V1</div></div>
+        <div class="blk blk-infra"><div class="blk-name">Vault · Datadog · Sentry · OTel</div><div class="blk-sub">V1/V2</div></div>
+        <div class="blk blk-infra new"><div class="blk-name">DO Multi-region DOKS</div><div class="blk-sub">BLR + SIN clusters<br>Active-active at V3 scale</div></div>
+      </div>
+    </div>
+  </div><!-- /ver-v3 -->
+</div><!-- /p1 -->
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — FULL TECH STACK (CHIPS)
+     ══════════════════════════════════════════ -->
+<div id="p2" class="pg">
+  <div class="ts-hero">
+    <h1>🛠️ Full Tech Stack</h1>
+    <p>92 technologies across 8 architectural layers. Filter by layer, hover a chip for details. Version dots: <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#059669;margin:0 2px"></span>V1 Foundation &nbsp;<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2563eb;margin:0 2px"></span>V2 Trust &amp; Engagement &nbsp;<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;margin:0 2px"></span>V3 Full Ecosystem</p>
+  </div>
+
+  <div class="ftabs" id="ftabs">
+    <div class="ftab active" data-f="all" onclick="filterChips('all',this)">All <span class="cnt">92</span></div>
+    <div class="ftab" data-f="web" onclick="filterChips('web',this)">🖥️ Web Frontend <span class="cnt">14</span></div>
+    <div class="ftab" data-f="mob" onclick="filterChips('mob',this)">📱 Mobile <span class="cnt">8</span></div>
+    <div class="ftab" data-f="be" onclick="filterChips('be',this)">⚙️ Backend <span class="cnt">14</span></div>
+    <div class="ftab" data-f="data" onclick="filterChips('data',this)">🗄️ Data &amp; Storage <span class="cnt">9</span></div>
+    <div class="ftab" data-f="ai" onclick="filterChips('ai',this)">🤖 AI &amp; ML <span class="cnt">11</span></div>
+    <div class="ftab" data-f="rt" onclick="filterChips('rt',this)">⚡ Real-time <span class="cnt">9</span></div>
+    <div class="ftab" data-f="infra" onclick="filterChips('infra',this)">🏗️ Infra &amp; DevOps <span class="cnt">16</span></div>
+    <div class="ftab" data-f="ext" onclick="filterChips('ext',this)">🔌 Third-party <span class="cnt">11</span></div>
+  </div>
+
+  <div class="chips-area" id="chips-area"></div>
+</div>
+<!-- /p2 -->
+
+<!-- Global tooltip -->
+<div id="chip-tip"><div class="tip-name"></div><div class="tip-ver"></div><div class="tip-desc"></div></div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 3 — TECH STACK REFERENCE TABLES
+     ══════════════════════════════════════════ -->
+<div id="p3" class="pg">
+<div class="p3wrap">
+  <div class="p3-topbar">
+    <h1>Tech Stack Reference</h1>
+    <div class="subtitle">Dating &amp; Relationship PWA &mdash; Web + Mobile</div>
+    <p class="intro">Every technology used across the dating PWA, grouped by architectural layer. Each entry includes the version it is introduced (V1&nbsp;=&nbsp;Foundation 0&ndash;9&nbsp;months, V2&nbsp;=&nbsp;Trust &amp; Engagement 12&ndash;18&nbsp;months, V3&nbsp;=&nbsp;Full Ecosystem 18&ndash;36&nbsp;months) and a concise explanation of its role.</p>
+  </div>
+  <div class="p3-legend">
+    <span style="font-weight:600;color:#333">Version introduced:</span>
+    <span class="p3-leg-item"><span class="p3-leg-dot" style="background:#059669"></span> V1 &mdash; Foundation</span>
+    <span class="p3-leg-item"><span class="p3-leg-dot" style="background:#2563eb"></span> V2 &mdash; Trust &amp; Engagement</span>
+    <span class="p3-leg-item"><span class="p3-leg-dot" style="background:#7c3aed"></span> V3 &mdash; Full Ecosystem</span>
+  </div>
+  <div class="p3-toc-wrap">
+    <h2>Contents</h2>
+    <ul class="p3-toc">
+      <li><a href="#p3s1"><span>🖥️</span> 1. Web Frontend &mdash; PWA</a></li>
+      <li><a href="#p3s2"><span>📱</span> 2. Mobile App &mdash; Ionic + Capacitor</a></li>
+      <li><a href="#p3s3"><span>⚙️</span> 3. Backend Services</a></li>
+      <li><a href="#p3s4"><span>🗄️</span> 4. Data &amp; Storage</a></li>
+      <li><a href="#p3s5"><span>🤖</span> 5. AI &amp; Machine Learning</a></li>
+      <li><a href="#p3s6"><span>⚡</span> 6. Real-time &amp; Communication</a></li>
+      <li><a href="#p3s7"><span>🏗️</span> 7. Infrastructure &amp; DevOps</a></li>
+      <li><a href="#p3s8"><span>🔌</span> 8. Third-party Integrations</a></li>
+    </ul>
+  </div>
+  <div class="p3-content">
+
+    <div class="p3-section" id="p3s1">
+      <div class="p3-section-header"><span class="p3-section-icon">🖥️</span><span class="p3-section-title">1. Web Frontend &mdash; PWA</span><span class="p3-section-count">14 technologies</span></div>
+      <p class="p3-section-intro">The web client is a React-based Progressive Web App served through a Module Federation shell. Each feature area is an independently deployed microfrontend remote that the shell lazy-loads at runtime.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">React 18</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Core UI framework. Concurrent rendering, Suspense for lazy MFE loading, and automatic batching. Used in the shell and every MFE.</td></tr>
+        <tr><td class="p3-col-tech">TypeScript</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Strict typing across all frontend code. Shared type packages published from the monorepo are consumed by both frontend and backend services.</td></tr>
+        <tr><td class="p3-col-tech">Vite</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Build tool for each individual MFE. Provides instant HMR during development and optimised ESM bundles for production.</td></tr>
+        <tr><td class="p3-col-tech">Webpack 5 Module Federation</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Microfrontend host/remote wiring. The shell fetches and mounts MFE bundles from separate deployment URLs at runtime, enabling independent team deploys.</td></tr>
+        <tr><td class="p3-col-tech">React Router v6</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Client-side routing inside the shell. Each MFE registers its own route subtree, enabling deep-link support per feature domain.</td></tr>
+        <tr><td class="p3-col-tech">Zustand</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Lightweight global state shared across MFEs via the shell. Holds auth user context, current match, notification queue, and wallet balance.</td></tr>
+        <tr><td class="p3-col-tech">TanStack Query</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Server state management &mdash; handles caching, background refetch, optimistic updates, and offline support. Eliminates boilerplate fetch/loading/error state.</td></tr>
+        <tr><td class="p3-col-tech">Tailwind CSS</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Utility-first CSS framework. Shared token configuration lives in a design system package; all MFEs import the same design tokens for consistent UI.</td></tr>
+        <tr><td class="p3-col-tech">Workbox</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Service Worker toolkit for PWA functionality. Network-first strategy for API calls, cache-first for static assets, background sync for offline actions.</td></tr>
+        <tr><td class="p3-col-tech">Socket.io Client</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Real-time WebSocket client. Handles live chat messages, typing indicators, match notifications, safety check-ins, and live trust score updates.</td></tr>
+        <tr><td class="p3-col-tech">WebRTC</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Peer-to-peer audio and video calls. The shell manages the signalling channel via Socket.io. STUN/TURN relay provided by Twilio for NAT traversal.</td></tr>
+        <tr><td class="p3-col-tech">Storybook</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Design system component library and visual testing environment. All shared components documented and visually tested before use in MFEs.</td></tr>
+        <tr><td class="p3-col-tech">Vitest</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Unit and integration testing framework. Vite-native for fast execution. Used with React Testing Library for component behaviour tests.</td></tr>
+        <tr><td class="p3-col-tech">Playwright</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">End-to-end browser testing. Covers full user flows: sign-up &rarr; swipe &rarr; match &rarr; chat &rarr; book an experience.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s2">
+      <div class="p3-section-header"><span class="p3-section-icon">📱</span><span class="p3-section-title">2. Mobile App &mdash; Ionic + Capacitor</span><span class="p3-section-count">8 technologies</span></div>
+      <p class="p3-section-intro">The mobile app shares approximately 85% of its codebase with the web MFEs. Ionic React provides mobile-optimised UI components, while Capacitor bridges to native device APIs without Cordova.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">Ionic React</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Mobile-optimised UI components (sheets, tabs, swipe gestures) that match native look and feel on iOS and Android while reusing the React codebase.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Native runtime bridge. Wraps the React PWA in a native shell and provides a plugin system for device API access without Cordova dependencies.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Camera</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Profile photo and video capture. Also provides the camera feed for liveness detection during identity verification.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Geolocation</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Used for nearby profile discovery, date location sharing, real-time safety location tracking, and event check-in.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Push Notifications</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">FCM (Android) and APNs (iOS) native push. Handled in the shell and routed to the appropriate MFE for display.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Biometrics</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Face ID and fingerprint authentication for fast re-auth flows and panic button trigger. Added as part of the V2 Female Safety Suite.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Filesystem</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Offline media caching, QR event ticket storage, and downloaded gift card assets for use without connectivity.</td></tr>
+        <tr><td class="p3-col-tech">Capacitor Screen Reader</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Accessibility support for screen readers. Required for India market compliance and inclusive design.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s3">
+      <div class="p3-section-header"><span class="p3-section-icon">⚙️</span><span class="p3-section-title">3. Backend Services</span><span class="p3-section-count">14 technologies</span></div>
+      <p class="p3-section-intro">All backend services follow a NestJS-first pattern for consistency, dependency injection, and enforced module boundaries across a 20+ service estate. Python handles AI workloads; Go is introduced at V2 for the highest-throughput services.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">Node.js 20 LTS</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Primary runtime for Auth, Profile, Matching, Chat, Wallet, Gift, Experience, Notify, Trust Score, Event, Safety, Subscription, Couple, Merchant, and Marketplace services.</td></tr>
+        <tr><td class="p3-col-tech">NestJS</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Structured Node.js framework. Dependency injection, guards, interceptors, and decorators enforce consistent service architecture across all Node.js services.</td></tr>
+        <tr><td class="p3-col-tech">Fastify Adapter</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">HTTP adapter inside NestJS. Approximately 2&times; faster throughput than the default Express adapter for high-volume API services.</td></tr>
+        <tr><td class="p3-col-tech">Python 3.11</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Language for AI Svc, Concierge AI Svc, and ML Pipeline. Chosen for native LangChain, PyTorch, and scikit-learn integration.</td></tr>
+        <tr><td class="p3-col-tech">FastAPI</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Python REST and async framework for AI services. Auto-generates OpenAPI documentation, includes Pydantic request validation, and supports async inference calls.</td></tr>
+        <tr><td class="p3-col-tech">Go 1.22</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">High-throughput rewrite of the Discovery and Matching services at V2 scale. ~10&times; the request throughput of Node.js for the hot swipe feed at 100k+ DAU.</td></tr>
+        <tr><td class="p3-col-tech">GraphQL &mdash; Apollo Server</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">BFF aggregation layer. A single GraphQL query returns profile, match status, and chat state together, reducing mobile round trips significantly.</td></tr>
+        <tr><td class="p3-col-tech">REST &mdash; OpenAPI 3</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">All inter-service HTTP communication. Spec-first: swagger-cli generates type-safe client SDKs from the OpenAPI spec for each consuming service.</td></tr>
+        <tr><td class="p3-col-tech">Passport.js</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">OAuth strategy handling within the Auth service &mdash; Google, Facebook, Apple, and LinkedIn sign-in are each implemented as Passport strategy modules.</td></tr>
+        <tr><td class="p3-col-tech">BullMQ</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Redis-backed job queues for background workers: photo moderation, gift dispatch, subscription renewal, trust score recalculation, and ML inference batching.</td></tr>
+        <tr><td class="p3-col-tech">Prisma ORM</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Type-safe PostgreSQL client used in NestJS services. Schema-first migrations and a generated query client eliminate raw SQL and type mismatches.</td></tr>
+        <tr><td class="p3-col-tech">Mongoose</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">MongoDB ODM for Profile, Experience, and Marketplace services. Schema-flexible for deeply nested lifestyle, preference, and interest data.</td></tr>
+        <tr><td class="p3-col-tech">class-validator</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">DTO validation decorators inside NestJS. Input sanitisation and schema validation applied to all incoming API payloads.</td></tr>
+        <tr><td class="p3-col-tech">Helmet.js</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">HTTP security header middleware applied to all services. Protects against XSS, clickjacking, and MIME sniffing attacks.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s4">
+      <div class="p3-section-header"><span class="p3-section-icon">🗄️</span><span class="p3-section-title">4. Data &amp; Storage</span><span class="p3-section-count">9 technologies</span></div>
+      <p class="p3-section-intro">Each microservice owns its own data store &mdash; no shared databases. PostgreSQL is the default for transactional data; MongoDB handles schema-flexible document data; Redis serves caching and queuing; DigitalOcean Spaces provides object storage.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">DO Managed PostgreSQL</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Primary relational database. Used by Auth, Matching, Wallet, Gift, Event, Trust Score, Subscription, Safety, Couple, Merchant, and Verification services. Standby replicas and daily automated backups.</td></tr>
+        <tr><td class="p3-col-tech">MongoDB</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Document store for Profile, Experience, and Marketplace services. Schema flexibility for nested lifestyle preferences, interest tags, and catalogue item attributes.</td></tr>
+        <tr><td class="p3-col-tech">DO Managed Redis</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Multi-purpose in-memory store: API response caching, session tokens, BullMQ job queues, match candidate queues, gift redemption code lookup, and rate limiting counters.</td></tr>
+        <tr><td class="p3-col-tech">DigitalOcean Spaces</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">S3-compatible object storage for profile photos, intro videos, voice notes, gift images, and event banners. Built-in CDN edge ensures low-latency media delivery globally.</td></tr>
+        <tr><td class="p3-col-tech">DO Managed OpenSearch</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Full-text and vector search for profile discovery, event search, gift catalogue browse, and experience search. Added at V2 when search quality becomes critical.</td></tr>
+        <tr><td class="p3-col-tech">Pinecone</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Dedicated vector database. Stores personality and interest embeddings generated by OpenAI. Powers semantic similarity matching beyond keyword-based filters.</td></tr>
+        <tr><td class="p3-col-tech">ClickHouse</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">Columnar analytics database. Handles partner revenue dashboards, conversion funnel analysis, behavioural cohort queries, and high-volume event ingestion. Introduced at V3.</td></tr>
+        <tr><td class="p3-col-tech">Sharp</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Node.js image processing library. Auto-resizes profile photos to multiple resolutions on upload. Runs as a BullMQ background worker to avoid blocking API responses.</td></tr>
+        <tr><td class="p3-col-tech">FFmpeg</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Video and audio transcoding for profile intro videos and voice notes. Runs as a sidecar container in Kubernetes to transcode media asynchronously after upload.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s5">
+      <div class="p3-section-header"><span class="p3-section-icon">🤖</span><span class="p3-section-title">5. AI &amp; Machine Learning</span><span class="p3-section-count">11 technologies</span></div>
+      <p class="p3-section-intro">AI is a core differentiator across three dimensions: profile coaching (V1), trust and safety intelligence (V2), and proprietary compatibility matching (V3). The stack is LLM-gateway first, with custom ML added incrementally as proprietary data accumulates.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">OpenAI GPT-4o</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Primary LLM for profile bio generation, icebreaker suggestions, conversation starters, relationship coaching responses, conflict guidance, and date planning.</td></tr>
+        <tr><td class="p3-col-tech">Claude 3.5 Sonnet</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Fallback and specialist LLM for long-context relationship advice and nuanced coaching exchanges where GPT-4o context limits or tone are insufficient.</td></tr>
+        <tr><td class="p3-col-tech">LangChain &mdash; Python</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">LLM orchestration framework. Manages RAG chains, tool calling, prompt templates, and conversation memory across all AI service endpoints.</td></tr>
+        <tr><td class="p3-col-tech">LangGraph</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Agentic workflow engine for multi-step AI Concierge tasks: iterative date planning, personalised gift recommendation loops, and coaching sessions that retain state across turns.</td></tr>
+        <tr><td class="p3-col-tech">OpenAI Embeddings</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">text-embedding-3-large model. Encodes profiles, interest tags, and messages into vectors stored in Pinecone for semantic similarity search and match scoring.</td></tr>
+        <tr><td class="p3-col-tech">Hugging Face Transformers</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Fine-tuned models for: fraud detection NLP classifier, message toxicity filter, and profile quality scorer &mdash; all trained on app-specific labelled data at V2 scale.</td></tr>
+        <tr><td class="p3-col-tech">scikit-learn</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Trust Score feature engineering &mdash; logistic regression and gradient boosting models trained on verification level, response rate, event participation, report history, and profile completeness.</td></tr>
+        <tr><td class="p3-col-tech">PyTorch</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">Custom compatibility model training on proprietary behavioural data. Predicts relationship likelihood from personality vectors, communication patterns, and long-term goal alignment.</td></tr>
+        <tr><td class="p3-col-tech">MLflow</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">ML experiment tracking, model versioning, and deployment registry for the V3 compatibility model. Ensures reproducibility and safe rollout of new model versions.</td></tr>
+        <tr><td class="p3-col-tech">Celery + Redis</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Async ML inference task queue. Runs batch trust score recalculation, nightly embedding generation for new profiles, and scheduled model scoring jobs.</td></tr>
+        <tr><td class="p3-col-tech">DO GPU Droplets</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">GPU compute instances (H100) for scheduled model training runs triggered by the ML Pipeline via Celery. Spun up for training and torn down after to minimise cost.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s6">
+      <div class="p3-section-header"><span class="p3-section-icon">⚡</span><span class="p3-section-title">6. Real-time &amp; Communication</span><span class="p3-section-count">9 technologies</span></div>
+      <p class="p3-section-intro">Real-time is central to the product &mdash; chat, calls, safety check-ins, and match notifications all require low-latency delivery. The stack uses WebSocket for bidirectional messaging, WebRTC for media, and Kafka for async inter-service events.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">Socket.io</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Bidirectional WebSocket server and client. Handles: chat messages, typing indicators, match notifications, live trust score updates, safety check-in pings, and real-time swipe feed events.</td></tr>
+        <tr><td class="p3-col-tech">WebRTC</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Peer-to-peer audio and video calls. The shell manages signalling via the Socket.io connection. The Chat service negotiates WebRTC session parameters.</td></tr>
+        <tr><td class="p3-col-tech">Twilio TURN</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">STUN/TURN relay server for WebRTC. Essential for NAT traversal on Indian mobile networks and corporate firewalls where direct peer connections frequently fail.</td></tr>
+        <tr><td class="p3-col-tech">Firebase Cloud Messaging</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Android push notification delivery: match alerts, new messages, safety check-in nudges, event reminders, and gift received notifications.</td></tr>
+        <tr><td class="p3-col-tech">Apple Push Notification Service</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">iOS push delivery. Routed through the Capacitor Push Notifications plugin and dispatched by the Notify microservice.</td></tr>
+        <tr><td class="p3-col-tech">SendGrid</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Transactional email: welcome onboarding, daily match digest, gift received confirmation, event reminders, subscription receipts, and trust badge earned notifications.</td></tr>
+        <tr><td class="p3-col-tech">Twilio SMS</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">SMS OTP for phone number verification and two-factor authentication. Also sends panic button SMS alerts to the user's registered emergency contacts.</td></tr>
+        <tr><td class="p3-col-tech">DO Managed Kafka</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Async event bus between microservices. Key topics: match.created, message.sent, gift.redeemed, trust.updated, event.checkedin, subscription.renewed. Decouples services and enables event replay.</td></tr>
+        <tr><td class="p3-col-tech">Daily.co</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Fallback video call infrastructure when WebRTC quality degrades on poor connections. Also used for Virtual Date Rooms available to Platinum members.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s7">
+      <div class="p3-section-header"><span class="p3-section-icon">🏗️</span><span class="p3-section-title">7. Infrastructure &amp; DevOps</span><span class="p3-section-count">16 technologies</span></div>
+      <p class="p3-section-intro">All infrastructure runs on DigitalOcean. Kubernetes (DOKS) orchestrates all services; Terraform codifies every resource; GitHub Actions delivers continuous deployment. Cloudflare sits at the edge for CDN, WAF, and DDoS protection.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">DOKS</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">DigitalOcean Kubernetes Service. Separate auto-scaling node pools per service tier: general API services, ML inference workers, and database proxies.</td></tr>
+        <tr><td class="p3-col-tech">Helm</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Kubernetes package manager. Each microservice has a Helm chart covering deployment spec, HPA (autoscaling), ingress rules, config maps, and Vault secret references.</td></tr>
+        <tr><td class="p3-col-tech">Docker</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">All services and MFE builds are containerised using multi-stage Dockerfiles to minimise image size. Images stored in the DO Container Registry.</td></tr>
+        <tr><td class="p3-col-tech">DO Container Registry</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Private Docker image registry integrated natively with DOKS. Eliminates dependency on external registries and simplifies pull secret management.</td></tr>
+        <tr><td class="p3-col-tech">Terraform</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Infrastructure as code for all DigitalOcean resources: DOKS clusters, Spaces buckets, managed databases, firewall rules, and load balancers.</td></tr>
+        <tr><td class="p3-col-tech">GitHub Actions</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">CI/CD pipeline. On merge to main: lint &rarr; unit test &rarr; Docker build &rarr; push to DO Registry &rarr; Helm upgrade on DOKS staging &rarr; smoke test &rarr; promote to production.</td></tr>
+        <tr><td class="p3-col-tech">Cloudflare</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">CDN, WAF, DDoS protection, DNS, and edge-level rate limiting. First line of defence before traffic reaches the API Gateway on DigitalOcean infrastructure.</td></tr>
+        <tr><td class="p3-col-tech">Nginx Ingress</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Kubernetes ingress controller. Routes external traffic to the correct service pods. Handles TLS termination using certificates issued by cert-manager.</td></tr>
+        <tr><td class="p3-col-tech">cert-manager</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Automatic TLS certificate provisioning and renewal via Let's Encrypt for all service endpoints. Certificates stored as Kubernetes secrets.</td></tr>
+        <tr><td class="p3-col-tech">HashiCorp Vault</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Secrets management. API keys, database credentials, and JWT signing secrets are injected into pods at runtime via the Vault Agent sidecar. No secrets in source control.</td></tr>
+        <tr><td class="p3-col-tech">Datadog</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">APM, distributed tracing, log aggregation, custom dashboards, and PagerDuty alerting. The Datadog agent runs as a DaemonSet on all DOKS nodes.</td></tr>
+        <tr><td class="p3-col-tech">OpenTelemetry</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Distributed tracing SDK instrumented in every service. Traces flow across Auth &rarr; Matching &rarr; Chat &rarr; Notify service boundaries. Exports spans to Datadog.</td></tr>
+        <tr><td class="p3-col-tech">Sentry</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Frontend and backend error tracking. Provides stack traces, release health monitoring, and user-facing error rate alerting for React MFEs and Node.js services.</td></tr>
+        <tr><td class="p3-col-tech">k6</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Load testing tool. Run against staging before every major release to validate throughput on the swipe feed, match endpoint, chat service, and payment flows.</td></tr>
+        <tr><td class="p3-col-tech">Snyk</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Dependency vulnerability scanning integrated into the GitHub Actions CI pipeline. Blocks deployments when critical CVEs are detected in npm or Python dependencies.</td></tr>
+        <tr><td class="p3-col-tech">DO Multi-region DOKS</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">Secondary Kubernetes cluster in a second DigitalOcean region (Bangalore + Singapore). Active-passive for disaster recovery; active-active at V3 scale for geographic latency optimisation.</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="p3-section" id="p3s8">
+      <div class="p3-section-header"><span class="p3-section-icon">🔌</span><span class="p3-section-title">8. Third-party Integrations</span><span class="p3-section-count">13 technologies</span></div>
+      <p class="p3-section-intro">External services are used for identity verification, payments, social authentication, mapping, gifting fulfilment, and analytics. Each integration is wrapped in an internal adapter service to isolate the rest of the system from provider API changes.</p>
+      <table><thead><tr><th class="p3-col-tech">Technology</th><th class="p3-col-ver">Version</th><th class="p3-col-usage">Usage / Purpose</th></tr></thead><tbody>
+        <tr><td class="p3-col-tech">Onfido</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Primary KYC provider. Performs government ID OCR, face match against the ID photo, and liveness video detection. The Onfido SDK is embedded inside the Verification MFE.</td></tr>
+        <tr><td class="p3-col-tech">Jumio</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Backup KYC provider. Used as a fallback when Onfido is unavailable and for specific regional document types where Onfido accuracy is lower.</td></tr>
+        <tr><td class="p3-col-tech">Razorpay</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Primary payment gateway for India. Supports UPI, cards, net banking, and EMI. Used for wallet top-up, subscription billing, event ticket purchase, and gift payments.</td></tr>
+        <tr><td class="p3-col-tech">Stripe</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">International payment fallback for non-India users. Handles card processing and subscription lifecycle (dunning, proration) for international accounts.</td></tr>
+        <tr><td class="p3-col-tech">LinkedIn API</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Professional verification flow. Employer name, job title, and LinkedIn profile URL validated via OAuth inside the Verification MFE to earn the professional verification badge.</td></tr>
+        <tr><td class="p3-col-tech">Facebook Login / Graph API</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Social sign-in and profile photo import. The Graph API is also used for Instagram account linking to strengthen identity trust signals.</td></tr>
+        <tr><td class="p3-col-tech">Google Sign-In</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">OAuth sign-in on web and mobile via the Capacitor Google Auth plugin. Also provides the identity token used for Calendar API access.</td></tr>
+        <tr><td class="p3-col-tech">Google Maps API</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Nearby profile radius calculation, date location sharing map display, event venue rendering, and experience location lookup throughout the app.</td></tr>
+        <tr><td class="p3-col-tech">Google Calendar API</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Event RSVP synchronisation. When a user RSVPs to an event, it is automatically added to their Google Calendar. Introduced with the V2 Events platform.</td></tr>
+        <tr><td class="p3-col-tech">Twilio</td><td class="p3-col-ver"><span class="p3-vbadge v1">V1</span></td><td class="p3-col-usage">Three products: SMS for OTP and panic button alerts, Voice for call fallback, and the TURN relay service for WebRTC NAT traversal.</td></tr>
+        <tr><td class="p3-col-tech">FNP API &mdash; Ferns N Petals</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">Physical gift fulfilment partner. API enables in-app ordering of flowers, cakes, and personalised gifts with order status tracking. Part of the V3 Full Marketplace.</td></tr>
+        <tr><td class="p3-col-tech">IGP API</td><td class="p3-col-ver"><span class="p3-vbadge v3">V3</span></td><td class="p3-col-usage">Secondary gift fulfilment partner. Covers chocolates, jewellery, and luxury gift categories not served by FNP. Also part of the V3 Full Marketplace.</td></tr>
+        <tr><td class="p3-col-tech">Hotjar</td><td class="p3-col-ver"><span class="p3-vbadge v2">V2</span></td><td class="p3-col-usage">Session recordings and click heatmaps on the web app. Used by the product team for UX optimisation and conversion improvement during the V2 engagement push.</td></tr>
+      </tbody></table>
+    </div>
+
+  </div><!-- /p3-content -->
+  <div class="p3-footer">Dating &amp; Relationship PWA &mdash; Tech Stack Reference &bull; 92 technologies across 8 layers</div>
+</div>
+</div><!-- /p3 -->
+
+<script>
+// ── Nav ──────────────────────────────────────────────────────────
+var curPage = 1;
+var pages = [
+  {id:'p1', title:'V1/V2/V3 Architecture'},
+  {id:'p2', title:'Full Tech Stack'},
+  {id:'p3', title:'Tech Stack Reference'}
+];
+
+function goPage(dir){
+  var next = curPage + dir;
+  if(next < 1 || next > pages.length) return;
+  document.getElementById(pages[curPage-1].id).classList.remove('active');
+  curPage = next;
+  var pg = pages[curPage-1];
+  document.getElementById(pg.id).classList.add('active');
+  document.getElementById('nav-title').textContent = pg.title;
+  document.getElementById('nav-num').textContent = curPage + ' / ' + pages.length;
+  document.getElementById('btn-prev').disabled = (curPage === 1);
+  document.getElementById('btn-next').disabled = (curPage === pages.length);
+  window.scrollTo(0,0);
+}
+
+// ── V1/V2/V3 tabs ────────────────────────────────────────────────
+function showVer(ver, tab){
+  document.querySelectorAll('.vtab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.vpanel').forEach(function(p){ p.classList.remove('active'); });
+  tab.classList.add('active');
+  document.getElementById('ver-'+ver).classList.add('active');
+}
+
+// ── Chip data ─────────────────────────────────────────────────────
+var CHIPS = [
+  // Web Frontend
+  {n:'React 18',f:'web',v:'v1',d:'Core UI framework. Concurrent rendering, Suspense for lazy MFE loading, automatic batching used across shell and all MFEs.'},
+  {n:'TypeScript',f:'web',v:'v1',d:'Strict typing across all frontend code. Shared type packages consumed by both frontend and backend.'},
+  {n:'Vite',f:'web',v:'v1',d:'Build tool per MFE. Instant HMR in dev, optimised ESM bundles for production.'},
+  {n:'Webpack 5 Module Federation',f:'web',v:'v1',d:'MFE host/remote wiring. Shell fetches and mounts MFE bundles from separate deployment URLs at runtime.'},
+  {n:'React Router v6',f:'web',v:'v1',d:'Client-side routing. Each MFE registers its own route subtree for deep-link support.'},
+  {n:'Zustand',f:'web',v:'v1',d:'Lightweight global state shared across MFEs: auth context, match, notification queue, wallet balance.'},
+  {n:'TanStack Query',f:'web',v:'v1',d:'Server state: caching, background refetch, optimistic updates, offline support.'},
+  {n:'Tailwind CSS',f:'web',v:'v1',d:'Utility-first CSS. Shared design token config imported by all MFEs for consistent UI.'},
+  {n:'Workbox',f:'web',v:'v1',d:'Service Worker toolkit. Network-first for APIs, cache-first for static assets, background sync for offline actions.'},
+  {n:'Socket.io Client',f:'web',v:'v1',d:'Real-time WebSocket client: chat, typing indicators, match notifications, safety check-ins.'},
+  {n:'WebRTC',f:'web',v:'v1',d:'Peer-to-peer audio/video calls. Signalling via Socket.io, STUN/TURN via Twilio.'},
+  {n:'Storybook',f:'web',v:'v1',d:'Design system library and visual testing. All shared components documented before use in MFEs.'},
+  {n:'Vitest',f:'web',v:'v1',d:'Unit and integration testing. Vite-native with React Testing Library.'},
+  {n:'Playwright',f:'web',v:'v1',d:'E2E browser testing: sign-up → swipe → match → chat → book experience.'},
+  // Mobile
+  {n:'Ionic React',f:'mob',v:'v1',d:'Mobile-optimised UI (sheets, tabs, swipe gestures) matching native feel on iOS and Android.'},
+  {n:'Capacitor',f:'mob',v:'v1',d:'Native runtime bridge. Wraps React PWA in a native shell with plugin system for device APIs.'},
+  {n:'Capacitor Camera',f:'mob',v:'v1',d:'Profile photo/video capture and liveness detection camera feed for KYC.'},
+  {n:'Capacitor Geolocation',f:'mob',v:'v1',d:'Nearby discovery, location sharing, safety tracking, event check-in.'},
+  {n:'Capacitor Push Notifications',f:'mob',v:'v1',d:'FCM (Android) and APNs (iOS) native push via Notify service.'},
+  {n:'Capacitor Biometrics',f:'mob',v:'v2',d:'Face ID and fingerprint auth for re-auth and panic button trigger. V2 Female Safety Suite.'},
+  {n:'Capacitor Filesystem',f:'mob',v:'v1',d:'Offline media caching, QR ticket storage, downloaded gift card assets.'},
+  {n:'Capacitor Screen Reader',f:'mob',v:'v2',d:'Accessibility support. Required for India market compliance and inclusive design.'},
+  // Backend
+  {n:'Node.js 20 LTS',f:'be',v:'v1',d:'Primary runtime for Auth, Profile, Matching, Chat, Wallet, Gift, Event, Safety, Subscription, and more.'},
+  {n:'NestJS',f:'be',v:'v1',d:'Structured Node.js framework. DI, guards, interceptors, decorators for consistent service architecture.'},
+  {n:'Fastify Adapter',f:'be',v:'v1',d:'HTTP adapter in NestJS. ~2× faster throughput than Express for high-volume APIs.'},
+  {n:'Python 3.11',f:'be',v:'v1',d:'Language for AI Svc, Concierge AI Svc, and ML Pipeline. Native LangChain, PyTorch, scikit-learn.'},
+  {n:'FastAPI',f:'be',v:'v1',d:'Python REST/async framework for AI services. Auto OpenAPI docs, Pydantic validation, async inference.'},
+  {n:'Go 1.22',f:'be',v:'v2',d:'High-throughput rewrite of Discovery and Matching at V2 scale. ~10× Node.js throughput at 100k+ DAU.'},
+  {n:'GraphQL — Apollo Server',f:'be',v:'v1',d:'BFF aggregation layer. Single query returns profile, match status, and chat state, reducing mobile round trips.'},
+  {n:'REST — OpenAPI 3',f:'be',v:'v1',d:'All inter-service HTTP. Spec-first: swagger-cli generates type-safe client SDKs per service.'},
+  {n:'Passport.js',f:'be',v:'v1',d:'OAuth strategy handling in Auth service: Google, Facebook, Apple, LinkedIn.'},
+  {n:'BullMQ',f:'be',v:'v1',d:'Redis-backed queues: photo moderation, gift dispatch, subscription renewal, trust score recalculation.'},
+  {n:'Prisma ORM',f:'be',v:'v1',d:'Type-safe PostgreSQL client. Schema-first migrations, generated query client.'},
+  {n:'Mongoose',f:'be',v:'v1',d:'MongoDB ODM for Profile, Experience, Marketplace. Schema-flexible for nested preference data.'},
+  {n:'class-validator',f:'be',v:'v1',d:'DTO validation decorators in NestJS. Input sanitisation on all API payloads.'},
+  {n:'Helmet.js',f:'be',v:'v1',d:'HTTP security headers on all services. Protects against XSS, clickjacking, MIME sniffing.'},
+  // Data
+  {n:'DO Managed PostgreSQL',f:'data',v:'v1',d:'Primary relational DB for Auth, Matching, Wallet, Gift, Event, Trust, Subscription, Safety, Couple, Merchant.'},
+  {n:'MongoDB',f:'data',v:'v1',d:'Document store for Profile, Experience, Marketplace. Schema-flexible for nested lifestyle data.'},
+  {n:'DO Managed Redis',f:'data',v:'v1',d:'Cache, sessions, BullMQ queues, match candidate queues, redemption code lookup, rate limits.'},
+  {n:'DigitalOcean Spaces',f:'data',v:'v1',d:'S3-compatible object storage for photos, videos, voice notes, gift images, event banners. Built-in CDN.'},
+  {n:'DO Managed OpenSearch',f:'data',v:'v2',d:'Full-text and vector search for profile discovery, events, gifts, experiences. Added at V2.'},
+  {n:'Pinecone',f:'data',v:'v1',d:'Dedicated vector DB. Stores OpenAI personality embeddings for semantic similarity matching.'},
+  {n:'ClickHouse',f:'data',v:'v3',d:'Columnar analytics DB. Partner revenue dashboards, conversion funnels, behavioural cohort queries. V3.'},
+  {n:'Sharp',f:'data',v:'v1',d:'Node.js image processing. Resizes profile photos to multiple resolutions via BullMQ worker.'},
+  {n:'FFmpeg',f:'data',v:'v1',d:'Video and audio transcoding for intro videos and voice notes. Sidecar container in Kubernetes.'},
+  // AI
+  {n:'OpenAI GPT-4o',f:'ai',v:'v1',d:'Primary LLM: bio generation, icebreakers, conversation starters, coaching, conflict guidance, date planning.'},
+  {n:'Claude 3.5 Sonnet',f:'ai',v:'v1',d:'Fallback/specialist LLM for long-context relationship advice where GPT-4o context limits are insufficient.'},
+  {n:'LangChain — Python',f:'ai',v:'v1',d:'LLM orchestration: RAG chains, tool calling, prompt templates, conversation memory.'},
+  {n:'LangGraph',f:'ai',v:'v2',d:'Agentic workflow engine for multi-step AI Concierge: date planning, gift recommendations, coaching sessions.'},
+  {n:'OpenAI Embeddings',f:'ai',v:'v1',d:'text-embedding-3-large. Encodes profiles and messages into Pinecone vectors for semantic match scoring.'},
+  {n:'Hugging Face Transformers',f:'ai',v:'v2',d:'Fine-tuned models: fraud detection NLP, toxicity filter, profile quality scorer. App-specific labelled data.'},
+  {n:'scikit-learn',f:'ai',v:'v2',d:'Trust Score feature engineering. Logistic regression + gradient boosting on verification, response rate, reports.'},
+  {n:'PyTorch',f:'ai',v:'v3',d:'Custom compatibility model on proprietary behavioural data. Predicts relationship likelihood.'},
+  {n:'MLflow',f:'ai',v:'v3',d:'ML experiment tracking, model versioning, deployment registry for V3 compatibility model.'},
+  {n:'Celery + Redis',f:'ai',v:'v2',d:'Async ML inference queue. Batch trust score recalculation, nightly embedding generation.'},
+  {n:'DO GPU Droplets',f:'ai',v:'v3',d:'H100 GPU instances for scheduled model training via Celery. Spun up and torn down to minimise cost.'},
+  // Real-time
+  {n:'Socket.io',f:'rt',v:'v1',d:'Bidirectional WebSocket server: chat, typing indicators, match notifications, safety pings, swipe events.'},
+  {n:'WebRTC',f:'rt',v:'v1',d:'P2P audio/video calls. Signalling via Socket.io, session negotiation in Chat service.'},
+  {n:'Twilio TURN',f:'rt',v:'v1',d:'STUN/TURN relay for WebRTC. Essential for NAT traversal on Indian mobile networks.'},
+  {n:'Firebase Cloud Messaging',f:'rt',v:'v1',d:'Android push: match alerts, messages, safety nudges, event reminders, gift notifications.'},
+  {n:'Apple Push Notification Service',f:'rt',v:'v1',d:'iOS push via Capacitor Push Notifications plugin and Notify microservice.'},
+  {n:'SendGrid',f:'rt',v:'v1',d:'Transactional email: onboarding, match digest, gift confirmation, event reminders, subscription receipts.'},
+  {n:'Twilio SMS',f:'rt',v:'v1',d:'SMS OTP for phone verification and 2FA. Also sends panic button SMS to emergency contacts.'},
+  {n:'DO Managed Kafka',f:'rt',v:'v2',d:'Async event bus. Topics: match.created, gift.redeemed, trust.updated, event.checkedin. Decouples services.'},
+  {n:'Daily.co',f:'rt',v:'v2',d:'Fallback video call infra when WebRTC degrades. Virtual Date Rooms for Platinum members.'},
+  // Infra
+  {n:'DOKS',f:'infra',v:'v1',d:'DigitalOcean Kubernetes Service. Auto-scaling node pools for API services, ML workers, DB proxies.'},
+  {n:'Helm',f:'infra',v:'v1',d:'K8s package manager. Charts per service: deployment, HPA, ingress, config maps, Vault refs.'},
+  {n:'Docker',f:'infra',v:'v1',d:'Multi-stage Dockerfiles for all services and MFE builds. Images in DO Container Registry.'},
+  {n:'DO Container Registry',f:'infra',v:'v1',d:'Private Docker registry natively integrated with DOKS. Simplifies pull secret management.'},
+  {n:'Terraform',f:'infra',v:'v1',d:'IaC for all DO resources: DOKS, Spaces, managed databases, firewall rules, load balancers.'},
+  {n:'GitHub Actions',f:'infra',v:'v1',d:'CI/CD: lint → test → Docker build → push to DO Registry → Helm upgrade → smoke test → prod.'},
+  {n:'Cloudflare',f:'infra',v:'v1',d:'CDN, WAF, DDoS, DNS, edge rate limiting. First line of defence before DigitalOcean infra.'},
+  {n:'Nginx Ingress',f:'infra',v:'v1',d:'K8s ingress controller. Routes traffic to service pods, handles TLS termination via cert-manager.'},
+  {n:'cert-manager',f:'infra',v:'v1',d:'Automatic TLS cert provisioning and renewal via Let\'s Encrypt. Certs stored as K8s secrets.'},
+  {n:'HashiCorp Vault',f:'infra',v:'v1',d:'Secrets management. API keys, DB credentials, JWT secrets injected at runtime via sidecar. No env files.'},
+  {n:'Datadog',f:'infra',v:'v1',d:'APM, distributed tracing, log aggregation, dashboards, PagerDuty alerting. DaemonSet on all nodes.'},
+  {n:'OpenTelemetry',f:'infra',v:'v2',d:'Distributed tracing SDK in every service. Cross-service spans exported to Datadog.'},
+  {n:'Sentry',f:'infra',v:'v1',d:'Frontend and backend error tracking. Stack traces, release health, error rate alerting.'},
+  {n:'k6',f:'infra',v:'v1',d:'Load testing against staging before every major release: swipe feed, match, chat, payment flows.'},
+  {n:'Snyk',f:'infra',v:'v1',d:'Dependency vulnerability scanning in CI. Blocks deploys on critical CVEs in npm or Python deps.'},
+  {n:'DO Multi-region DOKS',f:'infra',v:'v3',d:'Secondary K8s cluster in BLR + SIN. Active-passive DR; active-active at V3 for geo latency.'},
+  // Third-party (11 to match chip count)
+  {n:'Onfido',f:'ext',v:'v1',d:'Primary KYC: government ID OCR, face match, liveness video detection. SDK in Verification MFE.'},
+  {n:'Jumio',f:'ext',v:'v1',d:'Backup KYC provider. Fallback when Onfido unavailable; better for specific regional doc types.'},
+  {n:'Razorpay',f:'ext',v:'v1',d:'India payment gateway: UPI, cards, net banking, EMI. Wallet, subscriptions, tickets, gifts.'},
+  {n:'Stripe',f:'ext',v:'v1',d:'International payment fallback: card processing, subscription lifecycle (dunning, proration).'},
+  {n:'LinkedIn API',f:'ext',v:'v1',d:'Professional verification via OAuth: employer, job title, LinkedIn URL → professional badge.'},
+  {n:'Facebook / Graph API',f:'ext',v:'v1',d:'Social sign-in, profile photo import, Instagram linking for identity trust signals.'},
+  {n:'Google Sign-In',f:'ext',v:'v1',d:'OAuth on web and mobile via Capacitor Google Auth. Token reused for Calendar API.'},
+  {n:'Google Maps API',f:'ext',v:'v1',d:'Nearby radius calc, location sharing map, event venue rendering, experience location lookup.'},
+  {n:'Google Calendar API',f:'ext',v:'v2',d:'Auto-adds RSVPed events to user\'s Google Calendar. Introduced with V2 Events platform.'},
+  {n:'Twilio',f:'ext',v:'v1',d:'SMS OTP + panic alerts, Voice fallback, TURN relay for WebRTC NAT traversal.'},
+  {n:'Hotjar',f:'ext',v:'v2',d:'Session recordings and click heatmaps on web. UX optimisation during V2 engagement push.'}
+];
+
+var CAT_META = {
+  all:  {label:'All Technologies', icon:'🛠️'},
+  web:  {label:'Web Frontend — PWA', icon:'🖥️'},
+  mob:  {label:'Mobile App — Ionic + Capacitor', icon:'📱'},
+  be:   {label:'Backend Services', icon:'⚙️'},
+  data: {label:'Data & Storage', icon:'🗄️'},
+  ai:   {label:'AI & Machine Learning', icon:'🤖'},
+  rt:   {label:'Real-time & Communication', icon:'⚡'},
+  infra:{label:'Infrastructure & DevOps', icon:'🏗️'},
+  ext:  {label:'Third-party Integrations', icon:'🔌'}
+};
+
+var VER_LABEL = {v1:'V1 — Foundation',v2:'V2 — Trust & Engagement',v3:'V3 — Full Ecosystem'};
+
+function renderChips(fid){
+  var area = document.getElementById('chips-area');
+  area.innerHTML = '';
+  var filtered = (fid === 'all') ? CHIPS : CHIPS.filter(function(c){ return c.f === fid; });
+
+  if(fid === 'all'){
+    var order = ['web','mob','be','data','ai','rt','infra','ext'];
+    order.forEach(function(cat){
+      var items = CHIPS.filter(function(c){ return c.f === cat; });
+      var meta = CAT_META[cat];
+      var grp = document.createElement('div');
+      grp.className = 'cat-group';
+      grp.innerHTML = '<div class="cat-label"><span class="cat-icon">'+meta.icon+'</span>'+meta.label+'</div><div class="chips" id="cg-'+cat+'"></div>';
+      area.appendChild(grp);
+      var chipsDiv = grp.querySelector('#cg-'+cat);
+      items.forEach(function(c){ chipsDiv.appendChild(makeChip(c)); });
+    });
+  } else {
+    var meta = CAT_META[fid];
+    var grp = document.createElement('div');
+    grp.className = 'cat-group';
+    grp.innerHTML = '<div class="cat-label"><span class="cat-icon">'+meta.icon+'</span>'+meta.label+'</div><div class="chips" id="cg-single"></div>';
+    area.appendChild(grp);
+    var chipsDiv = grp.querySelector('#cg-single');
+    filtered.forEach(function(c){ chipsDiv.appendChild(makeChip(c)); });
+  }
+}
+
+function makeChip(c){
+  var chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.innerHTML = '<span class="vdot '+c.v+'"></span>'+c.n;
+  chip.addEventListener('mouseenter', function(e){ showTip(e, c); });
+  chip.addEventListener('mousemove', function(e){ moveTip(e); });
+  chip.addEventListener('mouseleave', hideTip);
+  return chip;
+}
+
+var tip = document.getElementById('chip-tip');
+function showTip(e, c){
+  tip.querySelector('.tip-name').textContent = c.n;
+  tip.querySelector('.tip-ver').textContent = VER_LABEL[c.v];
+  tip.querySelector('.tip-desc').textContent = c.d;
+  tip.style.display = 'block';
+  moveTip(e);
+}
+function moveTip(e){
+  var x = e.clientX + 16, y = e.clientY + 16;
+  if(x + 290 > window.innerWidth) x = e.clientX - 300;
+  if(y + 100 > window.innerHeight) y = e.clientY - 110;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+function hideTip(){ tip.style.display = 'none'; }
+
+function filterChips(fid, el){
+  document.querySelectorAll('.ftab').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  renderChips(fid);
+}
+
+// Init chips
+renderChips('all');
+</script>
+</body>
+</html>
