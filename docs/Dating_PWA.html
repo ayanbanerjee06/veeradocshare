@@ -17,6 +17,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:14px;background:#f5f7fa;co
   padding:0 28px;z-index:9999;
   box-shadow:0 2px 12px rgba(0,0,0,.25);
 }
+#nav-left{
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+}
+#home-link{
+  color:#fff;font-weight:700;text-decoration:none;font-size:13px;z-index:10000;
+}
+#home-link:hover{opacity:0.8}
 #nav button{
   background:rgba(255,255,255,.14);color:#fff;
   border:1px solid rgba(255,255,255,.32);
@@ -26,6 +33,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:14px;background:#f5f7fa;co
 }
 #nav button:hover:not(:disabled){background:rgba(255,255,255,.26)}
 #nav button:disabled{opacity:.3;cursor:not-allowed}
+#btn-next{align-self:flex-end}
 #nav-mid{text-align:center;color:#fff;line-height:1.3}
 #nav-mid .title{font-size:15px;font-weight:700}
 #nav-mid .num{font-size:11px;opacity:.65;margin-top:1px}
@@ -246,8 +254,11 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:14px;background:#f5f7fa;co
 
 <!-- ══ FIXED NAV ══ -->
 <div id="nav">
-  <button id="btn-prev" disabled onclick="goPage(-1)">&#8592; Previous</button>
-  <div id="nav-mid">
+  <div id="nav-left">
+    <a id="home-link" href="Home.html">Home</a>
+    <button id="btn-prev" disabled onclick="goPage(-1)">&#8592; Previous</button>
+  </div>
+  <div id="nav-mid" style="text-align: center;">
     <div class="title" id="nav-title">V1/V2/V3 Architecture</div>
     <div class="num" id="nav-num">1 / 3</div>
   </div>
