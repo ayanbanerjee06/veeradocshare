@@ -35,6 +35,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.65;col
 }
 .sb-logo .brand{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
 .sb-logo .sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px}
+.sb-logo #home-link{display:inline-block;margin-bottom:8px;color:#fff;font-weight:800;text-decoration:none}
+.sb-logo #home-link:hover{opacity:0.9}
 .sb-label{
   padding:16px 20px 6px;font-size:10px;font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.3);
@@ -59,7 +61,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.65;col
 .sb-ver-dot{width:8px;height:8px;border-radius:50%}
 
 /* ── MAIN ── */
-#main{margin-left:var(--sidebar);min-height:100vh}
+#main{margin-left:var(--sidebar);min-height:100vh;padding-top:58px}
+
+/* Top navigation (replicated from Dating_PWA.html) */
+#nav{
+  position:fixed;top:0;left:0;right:0;height:58px;
+  background:var(--blue);display:flex;align-items:center;justify-content:flex-start;
+  padding:0 20px;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.12);
+}
+#top-home{color:#fff;font-weight:700;text-decoration:none;margin-left:16px}
+#top-home:hover{opacity:0.9}
 
 /* ── HERO ── */
 .hero{
@@ -236,9 +247,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.65;col
 </head>
 <body>
 
+<div id="nav">
+  <a id="top-home" href="Home.html">Home</a>
+</div>
+
 <!-- ══ SIDEBAR ══ -->
 <nav id="sidebar">
   <div class="sb-logo">
+    <a id="home-link" href="Home.html">Home</a>
     <div class="brand">💕 Veera</div>
     <div class="sub">Functional Specification</div>
   </div>
